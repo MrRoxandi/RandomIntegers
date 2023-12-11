@@ -7,7 +7,6 @@
 #include "boost/random.hpp"
 #include <optional>
 #include <chrono>
-//#include <ranges>
 #include <list>
 
 typedef boost::random::mt19937_64 stdGenerator_t;
@@ -133,4 +132,5 @@ template<typename R_t>
 inline _Random_integer_generator<R_t>::_Random_integer_generator(const unsigned long long& seed) : _generator(stdGenerator_t(seed)) {}
 template<typename R_t>
 inline _Random_integer_generator<R_t>::_Random_integer_generator(const stdGenerator_t _gen) : _generator(_gen) {}
+
 #endif // !_RANDOM_INTEGER_H
