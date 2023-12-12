@@ -5,6 +5,7 @@
 #include "boost/multiprecision/miller_rabin.hpp"
 #include "boost/multiprecision/cpp_int.hpp"
 #include "boost/random.hpp"
+#include <iterator>
 #include <optional>
 #include <chrono>
 #include <list>
@@ -22,27 +23,24 @@ generateRange(const R_t& left, const R_t& right) : _lowerBound(left), _upperBoun
 constexpr unsigned int millerRabinIterations = 20;
 
 template<typename _Ch_t>
-inline const bool isPrime(const _Ch_t& number) {
+inline bool isPrime(const _Ch_t& number) {
 	return boost::multiprecision::miller_rabin_test(number, millerRabinIterations);
 }
 
 template<typename Vc_t>
 inline const std::optional<Vc_t> findPrime(std::list<Vc_t>& list) {
-	for (
-		auto ptr = list.begin();
-		ptr != list.end();
-		++ptr
-		)
-		if (isPrime<Vc_t>(*ptr))
-			return std::optional<Vc_t>(*ptr);
-	return std::optional<Vc_t>();
+	auto item = std::find_if(
+		list.begin(), list.end(), [](const Vc_t& n) {
+			return isPrime<Vc_t>(n);
+		}
+	);
+	return (item == list.end()) ? std::optional<Vc_t>() : std::optional<Vc_t>(*item);
 }
 
 template<typename R_t = Integer>
 class _Random_integer_generator {
 private:
 	stdGenerator_t _generator;
-
 	const R_t _getPrime(const generateRange<R_t>& range);
 public:
 	template<size_t _BitSize>
