@@ -5,31 +5,50 @@
 #include "boost/multiprecision/miller_rabin.hpp"
 #include "boost/multiprecision/cpp_int.hpp"
 #include "boost/random.hpp"
+#include <type_traits>
+#include <execution>
 #include <iterator>
 #include <optional>
 #include <chrono>
+#include <string>
 #include <list>
 
-typedef boost::random::mt19937_64 stdGenerator_t;
-typedef boost::multiprecision::cpp_int Integer;
+using stdGenerator_t = boost::random::mt19937_64 ;
+using Integer = boost::multiprecision::cpp_int ;
+
+template<typename inType>
+struct isInteger {
+	constexpr static bool value =
+		std::is_integral<inType>::value ||
+		std::is_same<inType, Integer>::value;
+};
 
 template<typename R_t = Integer>
-struct generateRange { const R_t _lowerBound; const R_t _upperBound;
-generateRange(const R_t& left, const R_t& right) : _lowerBound(left), _upperBound(right) {
-	if (_lowerBound >= _upperBound) throw std::invalid_argument("Invalid arguments for creating generateRange");
-}
+struct generateRange { 
+	static_assert(isInteger<R_t>::value, "R_t must be a numeric type");
+	const R_t _lowerBound; 
+	const R_t _upperBound;
+
+	generateRange(const R_t& left, const R_t& right) : _lowerBound(left), _upperBound(right) {
+		if (_lowerBound >= _upperBound) 
+			throw std::invalid_argument("Invalid arguments for creating generateRange");
+	}
 };
 
 constexpr unsigned int millerRabinIterations = 20;
 
 template<typename _Ch_t>
 inline bool isPrime(const _Ch_t& number) {
+	static_assert(isInteger<_Ch_t>::value, "Input type must be an integer");
+	
 	return boost::multiprecision::miller_rabin_test(number, millerRabinIterations);
 }
 
 template<typename Vc_t>
 inline const std::optional<Vc_t> findPrime(std::list<Vc_t>& list) {
-	auto item = std::find_if(
+	static_assert(isInteger<Vc_t>::value, "Input type must be an integer");
+
+	typename std::list<Vc_t>::iterator item = std::find_if(
 		list.begin(), list.end(), [](const Vc_t& n) {
 			return isPrime<Vc_t>(n);
 		}
@@ -39,6 +58,7 @@ inline const std::optional<Vc_t> findPrime(std::list<Vc_t>& list) {
 
 template<typename R_t = Integer>
 class _Random_integer_generator {
+	static_assert(isInteger<R_t>::value, "Generator type must be an integer");
 private:
 	stdGenerator_t _generator;
 	const R_t _getPrime(const generateRange<R_t>& range);
@@ -56,19 +76,21 @@ public:
 	_Random_integer_generator();
 	_Random_integer_generator(const unsigned long long& seed);
 	_Random_integer_generator(const stdGenerator_t _gen);
+
+	~_Random_integer_generator() noexcept = default;
 };
 
 template<typename R_t>
 using Generator = _Random_integer_generator<R_t>;
 
 template<typename R_t>
-inline const R_t _Random_integer_generator<R_t>::generatePrime(const R_t& _l, const R_t& _u) {
-	return generatePrime(generateRange<R_t>(_l, _u));
+inline const R_t _Random_integer_generator<R_t>::generatePrime(const R_t& left, const R_t& right) {
+	return generatePrime(generateRange<R_t>(left, right));
 }
 
 template<typename R_t>
-inline const R_t _Random_integer_generator<R_t>::generateNumber(const R_t& _l, const R_t& _u) {
-	return generateNumber(generateRange<R_t>(_l, _u));
+inline const R_t _Random_integer_generator<R_t>::generateNumber(const R_t& left, const R_t& right) {
+	return generateNumber(generateRange<R_t>(left, right));
 }
 
 template<typename R_t>
@@ -85,10 +107,12 @@ inline const R_t _Random_integer_generator<R_t>::_getPrime(const generateRange<R
 }
 template<typename R_t>
 inline const R_t _Random_integer_generator<R_t>::generatePrime(const generateRange<R_t>& range) {
+	if (range._upperBound < 3)
+		throw std::invalid_argument("Upperbound of generateRange must be more then 2");
 	R_t candidate = generateNumber(range) | 1;
 	if (isPrime(candidate)) return candidate;
-	R_t _lowerBound = candidate / 6 - 2;
-	R_t _upperBound = candidate * 6 + 2;
+	R_t _lowerBound = candidate / 2;
+	R_t _upperBound = candidate * 2;
 	if (_lowerBound < range._lowerBound) _lowerBound = range._lowerBound;
 	if (_upperBound > range._upperBound) _upperBound = range._upperBound;
 	bool _stat = (candidate - _lowerBound) < (_upperBound - candidate);
@@ -97,6 +121,8 @@ inline const R_t _Random_integer_generator<R_t>::generatePrime(const generateRan
 
 template<typename R_t> template<size_t _BitSize>
 inline const R_t _Random_integer_generator<R_t>::generatePrime() {
+	static_assert(_BitSize > 1, "BitSize of prime integer must be more then 1");
+
 	std::list<R_t> _timedList(200);
 	boost::random::independent_bits_engine<boost::random::mt11213b, _BitSize, R_t> 
 		_bitsEngine(_generator);
@@ -124,7 +150,14 @@ _Random_integer_generator<R_t>::generateNumber() {
 }
 template<typename R_t>
 inline _Random_integer_generator<R_t>::_Random_integer_generator() {
-	_generator = stdGenerator_t(std::chrono::steady_clock::now().time_since_epoch().count());
+	//_generator = stdGenerator_t(std::chrono::steady_clock::now().time_since_epoch().count());
+	std::random_device rd;
+	std::initializer_list<boost::random::seed_seq::result_type> init_list({
+		static_cast<boost::random::seed_seq::result_type>(std::chrono::steady_clock::now().time_since_epoch().count()),
+		rd(), rd(), rd(), rd()
+	});
+	boost::random::seed_seq ss(init_list);
+	_generator.seed(ss);
 }
 template<typename R_t>
 inline _Random_integer_generator<R_t>::_Random_integer_generator(const unsigned long long& seed) : _generator(stdGenerator_t(seed)) {}
