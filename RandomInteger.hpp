@@ -6,12 +6,8 @@
 #include "boost/multiprecision/cpp_int.hpp"
 #include "boost/random.hpp"
 #include <type_traits>
-#include <execution>
-#include <iterator>
-#include <optional>
 #include <chrono>
 #include <string>
-#include <deque>
 #include <bitset>
 #include <cstdint>
 
@@ -30,7 +26,10 @@ template<class Integer>
 Integer powmod(Integer a, Integer b, Integer m);
 
 template<class Integer>
-bool isPrime(Integer a);
+bool isPrime(Integer number);
+
+template<class Integer>
+Integer abs(Integer number);
 
 template<class Integer>
 Integer binToDec(const std::string_view view);
@@ -43,92 +42,75 @@ size_t bitLen(Integer number);
 
 constexpr short testIterations = 20;
 
+static boost::random::mt19937_64 genEngine(
+	std::random_device{}()
+	//std::chrono::steady_clock::now().time_since_epoch().count()
+);
+
 //Some first primes lower then 1'000
 std::vector<uint16_t> first_primes = { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397 };
 
+//Some functions to get Random Integers
+
+template<class Integer, size_t BitLen>
+static const Integer getRandomBits();
+
 template<class Integer>
-class RandomGenerator
-{
-	static_assert(isInteger<Integer>::value, "Generator type must be an integer");
-private:
-	boost::random::mt19937_64 genEngine;
+static const Integer getRandomBits(const size_t len);
 
-	template<size_t BitSize>
-	const Integer getLoweLevelPrime();
+template<class Integer, size_t BitLen>
+const Integer getRandomInteger();
 
-	const Integer getLoweLevelPrime(const size_t len);
+template<class Integer, size_t BitLen>
+const Integer getRandomPrime();
 
-	template<size_t BitSize>
-	const Integer getRandomBits();
+template<class Integer>
+const Integer getRandomInteger(const Integer lower_bound, const Integer upper_bound);
 
-	const Integer getRandomBits(const size_t len);
-
-public:
-	RandomGenerator();
-	RandomGenerator(const size_t seed);
-	RandomGenerator(const boost::random::seed_seq& seq);
-
-
-	template<size_t BitSize>
-	const Integer getRandomInteger();
-
-	template<size_t BitSize>
-	const Integer getRandomPrime();
-
-	const Integer getRandomInteger(const Integer lower_bound, const Integer upper_bound);
-
-	const Integer getRandomPrime(const Integer lower_bound, const Integer upper_bound);
-
-	~RandomGenerator() noexcept = default;
-};
-
+template<class Integer>
+const Integer getRandomPrime(const Integer lower_bound, const Integer upper_bound);
 
 //Realisations for RandomGenerator methods
 
 template<class Integer>
-inline const Integer RandomGenerator<Integer>::getRandomPrime(const Integer lower_bound, const Integer upper_bound)
+inline const Integer getRandomPrime(const Integer lower_bound, const Integer upper_bound)
 {
-	size_t lower_Size = bitLen(lower_bound);
-	size_t upper_Size = bitLen(upper_bound);
-	boost::random::uniform_int_distribution<size_t> dist(lower_Size, upper_Size);
-	size_t bit_len = dist(genEngine);
+	
+	boost::random::uniform_int_distribution<Integer> dist(lower_bound, upper_bound);
 	Integer candidate;
 	while (true)
 	{
-		candidate = getLoweLevelPrime(bit_len);
+		candidate = dist(genEngine) | 1;
 		if (isPrime(candidate))
 			return candidate;
 	}
 }
 
 template<class Integer>
-inline const Integer RandomGenerator<Integer>::getRandomInteger(const Integer lower_bound, const Integer upper_bound)
+inline const Integer getRandomInteger(const Integer lower_bound, const Integer upper_bound)
 {
-	size_t lower_Size = bitLen(lower_bound);
-	size_t upper_Size = bitLen(upper_bound);
-	boost::random::uniform_int_distribution<size_t> dist(lower_Size, upper_Size);
-	size_t bit_len = dist(genEngine);
-	return getRandomBits(bit_len);
+	boost::random::uniform_int_distribution<Integer> dist(lower_bound, upper_bound);
+	return dist(genEngine);
 }
 
-template<class Integer> template<size_t BitSize>
-inline const Integer RandomGenerator<Integer>::getRandomPrime()
+template<class Integer, size_t BitSize>
+inline const Integer getRandomPrime()
 {
 	Integer candidate;
 	while (true)
 	{
-		candidate = getLoweLevelPrime<BitSize>();
+		candidate = getLoweLevelPrime<Integer, BitSize>();
 		if (isPrime(candidate))
 			return candidate;
 	}
 }
 
-template<class Integer> template<size_t BitSize>
-inline const Integer RandomGenerator<Integer>::getLoweLevelPrime()
+template<class Integer, size_t BitSize>
+inline const Integer getLoweLevelPrime()
 {
 	while (true)
 	{
-		Integer candidate = getRandomBits<BitSize>();
+		Integer candidate = getRandomBits<Integer, BitSize>();
 		bool is_prime = true;
 		for (int i = 0; i < first_primes.size(); ++i)
 		{
@@ -145,11 +127,11 @@ inline const Integer RandomGenerator<Integer>::getLoweLevelPrime()
 }
 
 template<class Integer>
-inline const Integer RandomGenerator<Integer>::getLoweLevelPrime(const size_t len)
+inline const Integer getLoweLevelPrime(const size_t len)
 {
 	while (true)
 	{
-		Integer candidate = getRandomBits(len);
+		Integer candidate = getRandomBits<Integer>(len);
 		bool is_prime = true;
 		for (int i = 0; i < first_primes.size(); ++i)
 		{
@@ -165,14 +147,14 @@ inline const Integer RandomGenerator<Integer>::getLoweLevelPrime(const size_t le
 	}
 }
 
-template<class Integer> template<size_t BitSize>
-inline const Integer RandomGenerator<Integer>::getRandomInteger()
+template<class Integer, size_t BitSize>
+inline const Integer getRandomInteger()
 {
-	return getRandomBits<BitSize>();
+	return getRandomBits<Integer, BitSize>();
 }
 
-template<class Integer> template<size_t BitSize>
-inline const Integer RandomGenerator<Integer>::getRandomBits()
+template<class Integer, size_t BitSize>
+inline const Integer getRandomBits()
 {
 	std::bitset<BitSize - 1> BitSet;
 	boost::random::uniform_int_distribution<unsigned short> dist(0, 1);
@@ -184,33 +166,14 @@ inline const Integer RandomGenerator<Integer>::getRandomBits()
 }
 
 template<class Integer>
-inline const Integer RandomGenerator<Integer>::getRandomBits(const size_t len)
+inline const Integer getRandomBits(const size_t len)
 {
-	std::string bits = {};
-	bits.resize(len - 1, '0');
+	std::string bits(len, 0);
 	boost::random::uniform_int_distribution<unsigned short> dist(0, 1);
 	for (size_t i = 0; i < len - 1; ++i)
 		bits[i] = static_cast<char>('0' + dist(genEngine));
 	bits[len - 1] = '1';
 	return binToDec<Integer>(bits);
-}
-
-template<class Integer>
-inline RandomGenerator<Integer>::RandomGenerator()
-{
-	genEngine.seed(std::chrono::steady_clock::now().time_since_epoch().count());
-}
-
-template<class Integer>
-inline RandomGenerator<Integer>::RandomGenerator(const size_t seed)
-{
-	genEngine.seed(seed);
-}
-
-template<class Integer>
-inline RandomGenerator<Integer>::RandomGenerator(const boost::random::seed_seq& seq)
-{
-	genEngine.seed(seq);
 }
 
 //Realisations for functions
@@ -240,7 +203,7 @@ inline Integer powmod(Integer a, Integer b, Integer m)
 	a %= m;
 	while (b > 0)
 	{
-		if (b % 2 == 1)
+		if (!(b & 1))
 		{
 			result = mulmod(result, a, m);
 		}
@@ -287,9 +250,19 @@ std::string decToBin(Integer number)
 template<class Integer>
 size_t bitLen(Integer number)
 {
+	//Type check;
+	static_assert(isInteger<Integer>::value, "Input type must be an integral");
 	size_t len = 0;
 	for (; number > 0; number >>= 1)
 		len += 1;
 	return len;
+}
+
+template<class Integer>
+Integer abs(Integer number)
+{
+	//Type check;
+	static_assert(isInteger<Integer>::value, "Input type must be an integral");
+	return (number < 0) ? -number : number;
 }
 #endif // !_RANDOM_INTEGER_H
