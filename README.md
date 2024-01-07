@@ -1,91 +1,63 @@
-# Random Integer Generator Library
+# Random Integer Generator
 
-## Overview
-
-This C++ library provides functionality for generating random integers and prime numbers within specified ranges. It utilizes the Boost C++ libraries for efficient random number generation and primality testing.
+This C++ library provides functions for generating random integers, with a focus on generating random prime numbers. It uses the Boost C++ libraries for multiprecision arithmetic and Miller-Rabin primality testing.
 
 ## Features
 
-- Generation of random integers within a specified range.
-- Generation of random prime numbers within a specified range.
+- Generate random integers of specified length.
+- Generate random prime numbers.
+- Modular arithmetic functions (`mulmod`, `powmod`).
 - Primality testing using the Miller-Rabin algorithm.
-- Flexible API for generating numbers with a custom bit size.
+- Conversion functions between binary and decimal representations.
 
 ## Usage
 
-### Prerequisites
+### Type Check
 
-Ensure that you have the Boost C++ libraries installed to use this library. You can find the Boost libraries [here](https://www.boost.org/).
+The library includes a type check struct, `isInteger`, to ensure that the input type is either an integral type or a Boost multiprecision integer.
 
-### Integration
+### Useful Functions
 
-Include the necessary headers in your C++ code:
+- **mulmod**: Modular multiplication of two integers.
+- **powmod**: Modular exponentiation of an integer.
+- **isPrime**: Primality test using the Miller-Rabin algorithm.
+- **abs**: Absolute value of an integer.
+- **binToDec**: Convert a binary string to an integer.
+- **decToBin**: Convert an integer to a binary string.
+- **bitLen**: Calculate the number of bits required to represent an integer.
 
-```c++
-#include "boost/multiprecision/miller_rabin.hpp"
-#include "boost/multiprecision/cpp_int.hpp"
-#include "boost/random.hpp"
-#include <iterator>
-#include <optional>
-#include <chrono>
-#include <list>
-#include "RandomInteger.h"
-```
+### Random Number Generation
 
-### Basic Usage
+- **getRandomInteger**: Generate a random integer within a specified range.
+- **getRandomPrime**: Generate a random prime number within a specified range.
+- **getRandomBits**: Generate a random integer with a specified number of bits.
 
-#### Instantiation
-
-```c++
-Generator<Integer> generator; // Default constructor with a seed based on the current time.
-```
-
-#### Generating Random Integers
+### Example Usage
 
 ```cpp
-Integer randomInteger = generator.generateNumber();
+#include "random_integer.h"
+
+int main() {
+    // Generate a random prime number between 100 and 1000
+    auto randomPrime = getRandomPrime<uint32_t>(100, 1000);
+    
+    // Perform modular exponentiation
+    auto result = powmod<uint64_t>(2, 10, 100);
+    
+    return 0;
+}
 ```
 
-#### Generating Random Integers within a Range
+## Dependencies
 
-```cpp
-generateRange<Integer> range(1, 100);
-Integer randomIntegerInRange = generator.generateNumber(range);
-```
+- [Boost C++ Libraries](https://www.boost.org/)
 
-#### Generating Random Prime Numbers
+## Installation
 
-```cpp
-Integer randomPrime = generator.generatePrime();
-```
-
-#### Generating Random Prime Numbers within a Range
-
-```cpp
-generateRange<Integer> primeRange(100, 1000);
-Integer randomPrimeInRange = generator.generatePrime(primeRange);
-```
-
-### Advanced Usage
-
-#### Custom Seed
-
-```cpp
-Generator<Integer> customSeedGenerator(123456789); // Custom seed value
-```
-
-#### Custom Bit Size
-
-```cpp
-Integer customBitSize = generator.generateNumber<128>(); // Generate a 128-bit random integer
-Integer customBitSizePrime = generator.generatePrime<256>(); // Generate a 256-bit random prime
-```
-
-## Notes
-
-- The library uses the Miller-Rabin primality test with a default of 20 iterations.
-- Ensure Boost C++ libraries are properly installed and linked in your project.
+To use this library, make sure to have the Boost C++ Libraries installed. Include the `"random_integer.h"` header file in your C++ project.
 
 ## License
 
-This library is provided under the [MIT License](LICENSE). Feel free to use, modify, and distribute it as needed. If you find any issues or have suggestions, please create an [issue](https://github.com/yourusername/yourlibrary/issues) on GitHub.
+This library is provided under the [MIT License](LICENSE).
+
+Feel free to contribute or report issues on [GitHub](https://github.com/your_username/random-integer-generator).
