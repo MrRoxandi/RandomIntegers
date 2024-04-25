@@ -11,12 +11,21 @@
 #include <bitset>
 #include <cstdint>
 
-
-//Type check struct
+/* This struct will help us to check valid input type */
 template<typename inType>
 struct isInteger {
 	constexpr static bool value = std::is_integral<inType>::value || std::is_same<inType, boost::multiprecision::cpp_int>::value;
 };
+
+/* Some usefull macros */
+
+#define validate(x) static_assert(isInteger<x>::value, "Invalid input type. " #x " - isn't integral")
+
+#define int_dist(inT, lb, ub) boost::random::uniform_int_distribution<inT> dist(lb, ub)
+
+#define testIterations 20
+
+#define rabinTest(a) boost::multiprecision::miller_rabin_test(a, testIterations)
 
 //Some usefull functions:
 template<class Integer>
@@ -40,14 +49,12 @@ std::string decToBin(Integer number);
 template<class Integer>
 size_t bitLen(Integer number);
 
-constexpr short testIterations = 20;
-
 static boost::random::mt19937_64 genEngine(
 	std::random_device{}()
 	//std::chrono::steady_clock::now().time_since_epoch().count()
 );
 
-//Some first primes lower then 1'000
+//Some first primes lower then 400
 std::vector<uint16_t> first_primes = { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 257, 263, 269, 271, 277, 281, 283, 293, 307, 311, 313, 317, 331, 337, 347, 349, 353, 359, 367, 373, 379, 383, 389, 397 };
 
 //Some functions to get Random Integers
@@ -75,11 +82,12 @@ const Integer getRandomPrime(const Integer lower_bound, const Integer upper_boun
 template<class Integer>
 inline const Integer getRandomPrime(const Integer lower_bound, const Integer upper_bound)
 {
-	
-	boost::random::uniform_int_distribution<Integer> dist(lower_bound, upper_bound);
+	validate(Integer); //Validating types;
+	//boost::random::uniform_int_distribution<Integer> dist(lower_bound, upper_bound);
+	int_dist(Integer, lower_bound, upper_bound);
 	Integer candidate;
-	while (true)
-	{
+	for(;;)
+	{ 
 		candidate = dist(genEngine) | 1;
 		if (isPrime(candidate))
 			return candidate;
@@ -89,13 +97,16 @@ inline const Integer getRandomPrime(const Integer lower_bound, const Integer upp
 template<class Integer>
 inline const Integer getRandomInteger(const Integer lower_bound, const Integer upper_bound)
 {
-	boost::random::uniform_int_distribution<Integer> dist(lower_bound, upper_bound);
+	//boost::random::uniform_int_distribution<Integer> dist(lower_bound, upper_bound);
+	validate(Integer);
+	int_dist(Integer, lower_bound, upper_bound);
 	return dist(genEngine);
 }
 
 template<class Integer, size_t BitSize>
 inline const Integer getRandomPrime()
 {
+	validate(Integer);
 	Integer candidate;
 	while (true)
 	{
@@ -108,6 +119,7 @@ inline const Integer getRandomPrime()
 template<class Integer, size_t BitSize>
 inline const Integer getLoweLevelPrime()
 {
+	validate(Integer);
 	while (true)
 	{
 		Integer candidate = getRandomBits<Integer, BitSize>();
@@ -129,6 +141,7 @@ inline const Integer getLoweLevelPrime()
 template<class Integer>
 inline const Integer getLoweLevelPrime(const size_t len)
 {
+	validate(Integer);
 	while (true)
 	{
 		Integer candidate = getRandomBits<Integer>(len);
@@ -156,8 +169,9 @@ inline const Integer getRandomInteger()
 template<class Integer, size_t BitSize>
 inline const Integer getRandomBits()
 {
+	validate(Integer);
 	std::bitset<BitSize - 1> BitSet;
-	boost::random::uniform_int_distribution<unsigned short> dist(0, 1);
+	int_dist(uint16_t, 0, 1);
 	for (size_t i = 0; i < BitSize; ++i)
 		BitSet[i] = dist(genEngine);
 	BitSet[0] = 1;
@@ -168,8 +182,9 @@ inline const Integer getRandomBits()
 template<class Integer>
 inline const Integer getRandomBits(const size_t len)
 {
+	validate(Integer);
 	std::string bits(len, 0);
-	boost::random::uniform_int_distribution<unsigned short> dist(0, 1);
+	int_dist(uint16_t, 0, 1);
 	for (size_t i = 0; i < len - 1; ++i)
 		bits[i] = static_cast<char>('0' + dist(genEngine));
 	bits[len - 1] = '1';
@@ -182,7 +197,7 @@ template<class Integer>
 inline Integer mulmod(Integer a, Integer b, Integer m)
 {
 	//Type check;
-	static_assert(isInteger<Integer>::value, "Input type must be an integral");
+	validate(Integer);
 	Integer result = 0;
 	while (a != 0)
 	{
@@ -198,7 +213,7 @@ template<class Integer>
 inline Integer powmod(Integer a, Integer b, Integer m)
 {
 	//Type check;
-	static_assert(isInteger<Integer>::value, "Input type must be an integral");
+	validate(Integer);
 	Integer result = 1;
 	a %= m;
 	while (b > 0)
@@ -217,15 +232,15 @@ template<class Integer>
 inline bool isPrime(Integer a)
 {
 	//Type check;
-	static_assert(isInteger<Integer>::value, "Input type must be an integral");
-	return boost::multiprecision::miller_rabin_test(a, testIterations);
+	validate(Integer);
+	return rabinTest(a);
 }
 
 template<class Integer>
 Integer binToDec(const std::string_view view)
 {
 	//Type check;
-	static_assert(isInteger<Integer>::value, "Input type must be an integral");
+	validate(Integer);
 	Integer result = 0;
 	for (size_t i = 0; i < view.length(); ++i)
 	{
@@ -239,7 +254,7 @@ template<class Integer>
 std::string decToBin(Integer number)
 {
 	//Type check;
-	static_assert(isInteger<Integer>::value, "Input type must be an integral");
+	validate(Integer);
 	std::string binary = "";
 	for (; number > 0; number >>= 1)
 		binary = (number & 1 ? "1" : "0") + binary;
@@ -251,7 +266,7 @@ template<class Integer>
 size_t bitLen(Integer number)
 {
 	//Type check;
-	static_assert(isInteger<Integer>::value, "Input type must be an integral");
+	validate(Integer);
 	size_t len = 0;
 	for (; number > 0; number >>= 1)
 		len += 1;
@@ -262,7 +277,7 @@ template<class Integer>
 Integer abs(Integer number)
 {
 	//Type check;
-	static_assert(isInteger<Integer>::value, "Input type must be an integral");
+	validate(Integer);
 	return (number < 0) ? -number : number;
 }
 #endif // !_RANDOM_INTEGER_H
